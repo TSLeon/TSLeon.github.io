@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>python黑帽子学习笔记</title>
+
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css">
+</head>
+<body style="background-color:#F8F8FF">
+
+    <nav class="navbar navbar-default" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header col-md-4">
+                <a class="navbar-brand" href="#">TSLeon</a>
+            </div>
+            <div>
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="https://tsleon.github.io/">HOME</a>
+                    </li>
+                    <li>
+                        <a href="#">PYTHON</a>
+                    </li>
+                    <li>
+                        <a href="#">SPIDER</a>
+                    </li>
+                    <li>
+                        <a href="#">SCRAPY</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container col-md-2 pull-left" style="height:400px;width:15%">
+        <div class="container pull-left" style="background-color:white;width:100%;">
+            <div class="row" style="background-color:#4d4d4d;height:50%">
+                <p><br><br><br><br></p>
+                <img class="img-circle col-xs-offset-2 col-sm-offset-2 col-md-offset-2 col-lg-offset-2" src="https://tsleon.github.io/img/head.jpeg" style="width:65%;height:50%;">
+            </div>
+            <div class="row" style="height:50%">
+                <h3 class="text-center">TS</h3>
+                <p><br></p>
+                <p class="text-center">La vie en rose</p>
+                <p class="text-center">.</p>
+                <p class="text-center">.</p>
+                <p class="text-center">.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container col-md-10 pull-right" style="width:85%;">
+        <div class="container" style="background-color:white">
+            <div class="row">
+                <div class="col-md-1" style="background-color:#4d4d4d;width:5px;height:80px"></div>
+                <h2 class="rol-md-11 text-center">PYTHON黑帽子学习笔记</h2>
+            </div>
+            <div class="row">
+                <img class="img-rounded col-xs-offset-1 col-sm-offset-1 col-md-offset-1 col-lg-offset-1" src="https://tsleon.github.io/img/001.jpeg" style="width:80%;height:80%">
+            </div>
+            <p><br></p>
+            <div class="row">
+                <h4>第一章：网络编程</h4>
+                <div class="col-md-2" style="background-color:#4d4d4d"></div>
+                <div class="col-md-8">
+                    <p>在渗透测试中，经常会遇到需要创建一个TCP客户端连接服务、发送垃圾数据、进行模糊测试或者进行其他任务的情况。</p>
+                    <p>创建一个TCP客户端</p>
+                    <pre>
+                        import socket
+
+                        target_host = 'www.baidu.com'
+                        target_port = 80
+
+                        #建立一个socket对象
+                        #AF_INET对应ip4协议 SOCK_STREAM对应TCP协议
+                        client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+                        #连接
+                        client.connect((target_host,target_port))
+
+                        #发送一些数据
+                        client.send("GET / HTTP/1.1\r\nHost: baidu.com\r\n\r\n")
+
+                        #接受一些数据
+                        response = client.recv(4096)
+
+                        print response</pre>
+                    <p>创建一个UDP客户端</p>
+                    <pre>
+                        import socket
+                        target_host = "127.0.0.1"
+                        target_port = 80
+                        #建立一个socket对象
+                        client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+                        client.sendto("AABBCCDD",(target_host,target_port))
+                        #接收数据
+                        data,addr = client.recvfrom(4096)
+                        print data</pre>
+                    <p>创建一个TCP服务端</p>
+                    <pre>
+                        import socket
+                        import threading
+                        bind_ip   = '0.0.0.0'#监听所有主机
+                        bind_port = 9999
+                        server    = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                        server.bind((bind_ip,bind_port))
+                        server.listen(5)#启动服务器监听，最打连接数为5
+                        print "[*] Listening on %s:%d"%(bind_ip,bind_port)
+                        def handle_client(client_socket):
+                            #从客户端接受数据，通过1024端口
+                            request = client_socket.recv(1024)
+                            print "Received: %s" % request
+                            #利用客户端的套接字发送数据到目标客户端
+                            client_socket.send("ACK!")
+                            client_socket.close()#关闭套接字
+                        while True:
+                        #监听到客户端，用accept函数返回一个元组第一个为客户socket，第二个为目标主机与目标端口
+                            client,addr = server.accept()
+                            print "[*] Accepted connection from %s:%d"%(addr[0],addr[1])
+                            #将客户端套接字送入一个新的线程处理，主线程继续监听，实现同时连接多个客户端
+                            client_handler = threading.Thread(target=handle_client,args=(client,))
+                            client_handler.start()#开始新的线程</pre>
+                </div>
+                <div class="col-md-2" style="background-color:#4d4d4d"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.js"></script>
+</body>
+</html>
