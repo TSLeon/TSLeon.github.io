@@ -46,61 +46,231 @@
                 <div class="col-md-8">
                     <p>在渗透测试中，经常会遇到需要创建一个TCP客户端连接服务、发送垃圾数据、进行模糊测试或者进行其他任务的情况。</p>
                     <p>创建一个TCP客户端</p>
-                    <pre>
-                        import socket
+                    <pre>import socket
+target_host = 'www.baidu.com'
+target_port = 80
 
-                        target_host = 'www.baidu.com'
-                        target_port = 80
+#建立一个socket对象
+#AF_INET对应ip4协议 SOCK_STREAM对应TCP协议
+ client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
-                        #建立一个socket对象
-                        #AF_INET对应ip4协议 SOCK_STREAM对应TCP协议
-                        client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+#连接
+client.connect((target_host,target_port))
+#发送一些数据
+client.send("GET / HTTP/1.1\r\nHost: baidu.com\r\n\r\n")
 
-                        #连接
-                        client.connect((target_host,target_port))
-
-                        #发送一些数据
-                        client.send("GET / HTTP/1.1\r\nHost: baidu.com\r\n\r\n")
-
-                        #接受一些数据
-                        response = client.recv(4096)
-
-                        print response</pre>
+#接受一些数据
+response = client.recv(4096)
+print response</pre>
                     <p>创建一个UDP客户端</p>
-                    <pre>
-                        import socket
-                        target_host = "127.0.0.1"
-                        target_port = 80
-                        #建立一个socket对象
-                        client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-                        client.sendto("AABBCCDD",(target_host,target_port))
-                        #接收数据
-                        data,addr = client.recvfrom(4096)
-                        print data</pre>
+                    <pre>import socket
+target_host = "127.0.0.1"
+target_port = 80
+#建立一个socket对象
+client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+client.sendto("AABBCCDD",(target_host,target_port))
+#接收数据
+data,addr = client.recvfrom(4096)
+print data</pre>
                     <p>创建一个TCP服务端</p>
-                    <pre>
-                        import socket
-                        import threading
-                        bind_ip   = '0.0.0.0'#监听所有主机
-                        bind_port = 9999
-                        server    = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-                        server.bind((bind_ip,bind_port))
-                        server.listen(5)#启动服务器监听，最打连接数为5
-                        print "[*] Listening on %s:%d"%(bind_ip,bind_port)
-                        def handle_client(client_socket):
-                            #从客户端接受数据，通过1024端口
-                            request = client_socket.recv(1024)
-                            print "Received: %s" % request
-                            #利用客户端的套接字发送数据到目标客户端
-                            client_socket.send("ACK!")
-                            client_socket.close()#关闭套接字
-                        while True:
-                        #监听到客户端，用accept函数返回一个元组第一个为客户socket，第二个为目标主机与目标端口
-                            client,addr = server.accept()
-                            print "[*] Accepted connection from %s:%d"%(addr[0],addr[1])
-                            #将客户端套接字送入一个新的线程处理，主线程继续监听，实现同时连接多个客户端
-                            client_handler = threading.Thread(target=handle_client,args=(client,))
-                            client_handler.start()#开始新的线程</pre>
+                    <pre>import socket
+import threading
+
+bind_ip   = '0.0.0.0'#监听所有主机
+bind_port = 9999
+server    = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+server.bind((bind_ip,bind_port))
+server.listen(5)#启动服务器监听，最打连接数为5
+print "[*] Listening on %s:%d"%(bind_ip,bind_port)
+def handle_client(client_socket):
+    #从客户端接受数据，最大接收1024个字节
+    request = client_socket.recv(1024)
+    print "Received: %s" % request
+    #利用客户端的套接字发送数据到目标客户端
+    client_socket.send("ACK!")
+    client_socket.close()#关闭套接字
+while True:
+    #监听到客户端，用accept函数返回一个元组第一个为客户socket，第二个为目标主机与目标端口
+    client,addr = server.accept()
+    print "[*] Accepted connection from %s:%d"%(addr[0],addr[1])
+    #将客户端套接字送入一个新的线程处理，主线程继续监听，实现同时连接多个客户端
+    client_handler = threading.Thread(target=handle_client,args=(client,))
+    client_handler.start()#开始新的线程</pre>
+
+                    <p>在遇到需要建立一个简单的客户端与服务端来传递数据时，或者建立一个监听端让自己有监听权限时可以利用python编辑一个小工具</p>
+                    <pre>import sys
+import socket
+import getopt
+import threading
+import subprocess
+
+listen              = False
+command             = False
+upload              = False
+execute             = ""
+target              = ""
+upload_destination  = ""
+port                = 0
+
+def usage():
+    print 'BHP Net Tool'
+    print
+    print 'Usage:python bhpnet.py -t target_host -p port'
+    print '-l --listen              - listen on [host]:[port] for incoming connections'
+    print '-e --execute=file_to_run - execute the given file'
+    print '-c --command             - initialize a command shell'
+    print '-u --upload=destination  - when server open it client could write to [destination]'
+
+def main():
+    global listen
+    global port
+    global execute
+    global command
+    global upload_destination
+    global target
+
+    if not len(sys.argv[1:]):
+        usage()
+    try:
+        opts,args = getopt.getopt(sys.args[1:],'hle:t:p:cu:',['help','listen','execute=','target=','port=','command','upload='])
+    except getopt.GetoptError as err:
+        print str(err)
+        usage()
+#getopt模块是python中专门用来处理命令行参数的
+#函数getopt（args,shortopts,longopts=[])
+#shortopts 短格式（-） 如命令后需接参数则在后面接':'否则不接任何符合，如上的e:,t:,p:,u:需接参数，h,l,不需参数
+#longopts  长格式（--）如命令后需接参数则在后面接’=‘否则不接，如上的target=需接参数，command不需参数
+#函数返回一个列表，第一个为包含符合命令格式元组列表，第二个为不符合格式的参数列表
+
+    for o,a in opts:
+        if o in ('-h','--help'):
+            usage()
+        elif o in ('-l','--listen'):
+            listen = True
+        elif o in ('-e','--execute'):
+            execute = a
+        elif o in ('-c','--command'):
+            command = True
+        elif o in ('-u','--upload'):
+            upload_destination = a
+        elif o in ('-t','--target'):
+            target = a
+        elif o in ('-p','--port'):
+            port = int(a)
+        else:
+            assert False,'Unhandled Option'
+    #判断是作为服务端监听还是作为客户端输入数据
+    if not listen and len(target) and port > 0:
+        #从命令行读取内存数据
+        #用CTRL-D结束输入
+        buffer = sys.stdin.read()
+
+        #发送数据
+        client_sender(buffer)
+    if listen:
+        server_loop()
+
+def client_sender(buffer):
+    client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    try:
+        client.connect((target,port))
+        if len(buffer):
+            client.send(buffer)
+
+        while True:
+            #等待数据回传
+            recv_len = 1
+            response = ""
+
+            while recv_len:
+                data    = client.recv(4096)
+                #一次最多接收4096个字节
+                recv_len = len(data)
+                response += data
+
+                if recv_len < 4096:
+                    break
+            print response,
+            #客户端输入
+            buffer = raw_input("")
+            buffer += '\n'
+            client.send(buffer)
+
+    except:
+        print '[*] Exception! Exiting.'
+        client.close()
+
+def server_loop():
+    global target
+
+    #如果没有定义目标，则监听所有接口
+    if not len(target):
+        target = ''
+
+    server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server.bind((target,port))
+    server.listen(5)
+
+    while True:
+        client_socket,addr = server.accept()
+
+        #才分一个新线程来处理新的客户
+        client_thread = threading.Thread(target=client_handler,args=(client_socket,))
+        client_thread.start()
+
+def run_command(command):
+    #去掉换行
+    command = command.rstrip()
+    try:
+        output = subprocess.check_output(command,stderr=subprocess.STDOUT,shell=True)
+        #利用check_output函数运行命令并返回结果
+    except:
+        output = 'Failed to execute command.\r\n'
+
+    return output
+
+def client_handler(client_socket):
+    global upload
+    global execute
+    global command
+
+    #检查是否上传文件
+    if len(upload_destination):
+        file_buffer = ""
+
+        while True:
+            data = client_socket.recv(1024)
+            if not data:
+                break
+            else:
+                file_buffer += data
+        #将接收的数据写入文件
+        try:
+            file_descriptor = open(upload_destination,'wb')
+            file_descriptor.write(file_buffer)
+            file_descriptor.close()
+            client_socket.send('Successfully saved file to %s\r\n' % upload_destination)
+        except:
+            client_socket.send('Failed to save file to %s\r\n' % upload_destination)
+
+    if len(execute):
+        #运行命令
+        output = run_command(execute)
+        client_socket.send(output)
+
+    #如果需要打开一个命令行shell，则进入另一个循环
+    if command:
+        while True:
+            #模拟进入一个命令行窗口
+            client_socket.send('&lt;BHP:#&gt;')
+            #接收数据直到发现换行
+            cmd_buffer = ""
+            while '\n' not in cmd_buffer:
+                cmd_buffer += client_socket.recv(1024)
+            response = run_command(cmd_buffer)
+            client_socket.send(response)</pre>
+
+                    <p>打开一个终端运行<code>python bhpnet.py -l -p 9999 -c</code>，这段命令为作为服务端监听所以主机在9999号端口的连接并且打开一个命令行shell。再打开另外一个终端运行<code>python bhpnet.py -t localhost -p 9999</code>,这段命令为作为客户端连接本地的9999号端口，在输入<code>CTRL-D</code>（为linux系统下，如是windows系统则为CTRL-Z）来结束从标准输入端的输入从而让客户端进入<code>client_sender()</code>函数，之后客户端便会显示&lt;BHP:#&gt;表示打开命令个shell，即可输入命令，命令将会送入服务端执行再将执行结果返回至客户端显示。</p>
                 </div>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
             </div>
@@ -108,6 +278,12 @@
         <p><br></p>
     </div>
 
+
+    <div class="container col-xs-6 col-sm-6 col-md-6 col-lg-6">
+        <div class="row">
+            <p class="text-right">&copy;tsleon</p>
+        </div>
+    </div>
     <script src="https://code.jquery.com/jquery.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.js"></script>
 </body>
