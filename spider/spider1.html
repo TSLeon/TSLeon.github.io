@@ -67,7 +67,7 @@
                     <p>通过官网下在相应的版本，当下流行的为python2版本，但是python3是未来的主流。下载地址<a href="https://www.python.org/">www.python.org</a></p><br>
 
                     <h4 class="text-info">IDE选择</h4>
-                    <p>支持python语言的编辑器有多种，其中pycharm编辑器是专门为python开发的，推荐使用pycharm进行编写，下载地址：<a href="https://www.jetbrains.com/pycharm/">www.jetbrains.com/pycharm</a></p>
+                    <p>支持python语言的编辑器有多种，其中pycharm编辑器是专门为python开发的，推荐使用pycharm进行编写，下载地址<a href="https://www.jetbrains.com/pycharm/">www.jetbrains.com/pycharm</a></p>
                 </div>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
             </div>
@@ -78,19 +78,20 @@
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
                 <div class="col-md-8">
                     <h4 class="text-info">下载网页</h4>
-                    <pre>
-                        import urllib2
-                        def downloads(url):
-                            print 'Downloading:',url
-                            try:
-                                html = urllib2.urlopen(url).read()
-                            except urllib2.URLError , e:
-                                print 'Download error:',e.reason
-                                html = None
-                            return html
-                        url = 'https://www.baidu.com'
-                        print downloads(url)</pre>
-                    <p>通过上面的代码即可将百度首页的代码下载到本地，其中<code>import urllib2</code>为导入urllib2模块，这个模块可以处理url（即平时访问网页的网址，中文名为统一资源定位符）这个模块可以通过调用<code>urlopen()</code>函数访问提供的url并且返回一个类文件对象，并且提供：<code>read()</code>,<code>readline()</code>,<code>readlines</code>,<code>fileno()</code>,<code>close()</code>的操作，使用方式和文件对象完全一样。通过<code>read()</code>方法可以将整个网页一次性读出。若访问url失败，则会通过调用<code>URLError</code>模块打印错误。</p>
+                    <pre>import urllib2
+def downloads(url):
+    print 'Downloading:',url
+    try:
+        html = urllib2.urlopen(url).read()
+    except urllib2.URLError , e:
+        print 'Download error:',e.reason
+        html = None
+    return html
+url = 'https://www.baidu.com'
+print downloads(url)</pre>
+
+                    <p>通过上面的代码即可将百度首页的代码下载到本地，其中<code>import urllib2</code>为导入urllib2模块，这个模块可以处理url（即平时访问网页的网址，中文名为统一资源定位符）这个模块可以通过调用<code>urlopen()</code>函数访问提供的url并且返回一个类文件对象，通过<code>read()</code>方法可以将整个网页一次性读出。若访问url失败，则会通过调用<code>URLError</code>模块打印错误。     </p>
+
                 </div>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
             </div>
