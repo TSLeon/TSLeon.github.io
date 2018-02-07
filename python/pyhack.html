@@ -271,6 +271,144 @@ def client_handler(client_socket):
             client_socket.send(response)</pre>
 
                     <p>打开一个终端运行<code>python bhpnet.py -l -p 9999 -c</code>，这段命令为作为服务端监听所以主机在9999号端口的连接并且打开一个命令行shell。再打开另外一个终端运行<code>python bhpnet.py -t localhost -p 9999</code>,这段命令为作为客户端连接本地的9999号端口，在输入<code>CTRL-D</code>（为linux系统下，如是windows系统则为CTRL-Z）来结束从标准输入端的输入从而让客户端进入<code>client_sender()</code>函数，之后客户端便会显示&lt;BHP:#&gt;表示打开命令个shell，即可输入命令，命令将会送入服务端执行再将执行结果返回至客户端显示。</p>
+
+                    <p>建立一个TCP代理，在无法使用wireshark等软件时用来嗅探本地流量，或者了解位置协议。</p>
+                    <p>TCP代理的工作流程：假设有A，B两台主机。A与TCP代理之间交换数据，B与TCP代理交换数据的方式来替代A，B之间之间交换数据。</p>
+
+
+
+                    <pre>import sys
+import socket
+import threading
+
+def server_loop(local_host,local_port,remote_host,remote_port,receive_first):
+
+    server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+    try:
+        server.bind((local_host,local_port))
+    except:
+        print "[!!] Failed to listen on %s:%d" % (local_host,local_port)
+        print "[!!] Check for other listening sockets or correct permissions."
+        sys.exit(0)
+
+    print '[*] Listening on %s:%d' % (local_host,local_port)
+    server.listen(5)
+
+    while True:
+        client_socket,addr = server.accept()
+        print "[==>] Recived incoming connection from %s:%d" % (addr[0],addr[1])
+
+        proxy_thread = threading.Thread(target=proxy_handler,args=(client_socket,remote_host,remote_port,receive_first))
+        proxy_thread.start()<p class="text-success">#以上代码建立TCP服务端。
+#接受到本地连接后启动一个新的线程调用proxy_handler函数，主线程继续运行while循环。</p>
+def main():
+
+    if len(sys.argv[1:]) != 5:
+        print "Usage: python proxy_TCP.py [localhost] [localport] [remotehost] [remoteport] [receive_first]"
+        print "Example: python proxy_TCP.py 127.0.0.1 9000 10.12.132.1 9000 True"
+        sys.exit(0)
+
+
+    local_host = sys.argv[1]
+    local_port = int(sys.argv[2])<p class="text-success">#设置本地监听参数</p>
+    remote_host = sys.argv[3]
+    remote_port = int(sys.argv[4])<p class="text-success">#设置远程目标<p>
+
+
+    receive_first = sys.argv[5]<p class="text-success">#发送数据给远程主机前是否先接受数据</p>
+    if "True" in receive_first:
+        receive_first = True
+    else:
+        receive_first = False
+
+    server_loop(local_host,local_port,remote_host,remote_port,receive_first)<p class="text-success">#设置监听参数</p>
+def proxy_handler(client_socket,remote_host,remote_port,receive_first):
+
+    remote_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    remote_socket.connect((remote_host,remote_port))<p class="text-success">#与远程主机建立TCP连接
+#如果有必要先从远程主机接受数据</p>
+    if receive_first:
+        remote_buffer = receive_from(remote_socket)
+        hexdump(remote_buffer)<p class="text-success">#输出数据的十六进制格式</p>
+        remote_buffer = response_handler(remote_buffer)
+
+        if len(remote_buffer):
+            print "[<==] Sending %d bytes to localhost." % len(remote_buffer)
+            client_socket.send(remote_buffer)
+
+    while True:
+
+        local_buffer = receive_from(client_socket)
+
+        if len(local_buffer):
+
+            print "[<==] Received %d bytes from localhost." % len(local_buffer)
+            hexdump(local_buffer)
+
+            local_buffer = request_handler(local_buffer)
+            remote_socket.send(local_buffer)
+            print "[==>] Sent to remote."
+
+        remote_buffer = receive_from(remote_socket)
+
+        if len(remote_buffer):
+
+            print "[<==] Received %d bytes from remote." % len(remote_buffer)
+            hexdump(remote_buffer)
+
+            remote_buffer = response_handler(remote_buffer)
+
+            client_socket.send(remote_buffer)
+
+            print "[<==] Sent to localhost."
+
+        if not len(local_buffer) and not len(remote_buffer):
+            client_socket.close()
+            remote_socket.close()
+            print "[*] No more data. Closing connections."
+
+            break<p class="text-success">#循环从本地与远程读取数据并进行数据交换</p>
+def hexdump(src, length=16):
+    result = []
+    digits = 4 if isinstance(src,unicode) else 2
+
+    for i in xrange(0,len(src),length):
+        s = src[i:i+length]
+        hexa = b' '.join(["%0*X" % (digits, ord(x))  for x in s])
+        text = b''.join([x if 0x20 <= ord(x) < 0x7F else b'.' for x in s])
+        result.append( b"%04X   %-*s   %s" % (i, length*(digits + 1),hexa,text))
+
+    print b'\n'.join(result)
+
+def receive_from(connection):
+
+    buffer = ""
+
+    connection.settimeout(2)
+
+    try:
+
+        while True:
+
+            data = connection.recv(4096)
+            if not data:
+                break
+            buffer += data
+    except:
+        pass
+
+    return buffer
+
+def request_handler(buffer):
+    return buffer<p class="text-success">#可添加对请求数据的修改</p>
+def response_handler(buffer):
+    return buffer<p class="text-success">#可添加对响应数据的修改</p>
+#程序开始处 调用编写的main函数
+main()</pre>
+                    <p>下图为TCP代理嗅探到的真机与虚拟机之间的数据交替</p>
+                    <img class="img-thumbnail" src="https://tsleon.github.io/img/pro.png">
+                    <p class="text-warning">在进行测试时需要在运行tcp代理的主机上运行一个客户端去连接tcp代理，且客户端的连接的host须为‘127.0.0.1’，否则无法与tcp代理建立连接。</p>
                 </div>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
             </div>
