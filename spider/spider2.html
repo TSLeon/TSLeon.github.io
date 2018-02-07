@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>python网络爬虫二</title>
+
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css">
+</head>
+<body style="background-color:#F8F8F8">
+    <div class="navbar navbar-fixed-top col-xs-2 col-sm-2 col-md-2 col-lg-2 pull-left" role="navigation" style="height:100%;background-color:white;padding:0;margin:0;width:15%">
+        <div class="container-fluid" style="background-color:#4d4d4d;height:40%;">
+        </div>
+        <div class="container-fluid" style="height:60%">
+            <div class="row">
+                <h3 class="text-center">TS</h3>
+            </div>
+            <div class="row">
+                <p class="text-center">La vie en rose</p>
+            </div>
+            <div class="row">
+                <a href="https://tsleon.github.io/"><p class="text-center">主页</p></a>
+                <a href="https://tsleon.github.io/pyhack_home.html"><p class="text-center">Python</p></a>
+                <a href="https://tsleon.github.io/spider/spider.html"><p class="text-center">Python爬虫</p></a>
+                <p class="text-center">.</p>
+                <p class="text-center">.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container col-xs-10 col-sm-10 col-md-10 col-lg-10 pull-right" style="width:85%;">
+        <div class="container" style="background-color:white">
+            <div class="row">
+                <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1" style="background-color:#4d4d4d;width:5px;height:80px"></div>
+                <h2 class="col-xs-11 col-sm-11 col-md-11 col-lg-11 text-center">PYTHON网络爬虫学习笔记(二)</h2>
+            </div>
+            <div class="row">
+                <img class="img-rounded col-xs-offset-1 col-sm-offset-1 col-md-offset-1 col-lg-offset-1" src="https://tsleon.github.io/img/005.jpg" style="width:80%;height:80%">
+            </div>
+            <p><br></p>
+
+            <div class="row">
+                <h4>urllib2库的使用</h4>
+                <div class="col-md-2" style="background-color:#4d4d4d"></div>
+                <div class="col-md-8">
+                    <p>我们浏览的网页都是通过html，css，javascript等混合组成通过浏览器解释后才呈现出我们平时所见的页面，其中css，javascript等是对网页的渲染，给网页增添活力什么的，真正的主干内容是写在html中的，而我们一般想要抓取的内容也都在其中。</p>
+                    <pre>import urllib2
+
+def download(url):
+    try:
+        html = urllib2.urlopen(url)
+        print html.read()
+    except urllib2.URLError as e:
+        print 'Download error:',e.reason
+url = "http://www.23us.so"
+download(url)</pre>
+                    <p>上述的代码将爬取顶点小说网站的首页代码并打印出来，利用浏览器查看顶点小说网站的源代码来验证是否正确。</p>
+                    <p>我们再尝试爬取下其他网站的网页。例如糗事百科。把上述代码中的<code>url</code>改成http://www.qiushibaike.com再次运行。结果发现编译器报错了httplib.BadStatusLine:''这是因为有些网页设置了必须浏览器才能访问，如果检测到不是浏览器就不会返回数据，所以这时候就得让爬虫伪装成浏览器偷偷的访问了，这时就得更换一种方式来打开网页</p>
+                    <pre>import urllib2
+
+headers = {
+    'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
+}
+def download(url):
+    try:
+        request = urllib2.Request(url,headers=headers)
+        response = urllib2.urlopen(request)
+        print response.read()
+    except urllib2.URLError as e:
+        print 'Download error:',e.reason
+url = "http://www.qiushibaike.com"
+download(url)</pre>
+                    <p>上述代码中增加了一个<code>headers</code>字典，一个<code>request</code>其他基本没改变，这种方式便是模仿浏览器访问服务器的方式——浏览器访问网页时会向服务器发送一个请求(request)，服务器接受后将产生一个响应(response),浏览器接受到这个响应后，我们就能看到所浏览的网页 了(当然实际过程还有很多操作，简化后大概就是这样)。所以我们先利用<code>Request</code>函数制作一个请求，其中放入两个参数<code>url</code>,<code>headers</code>，其中headers中user-agent就表示你是在用浏览器访问。这里表示我在用火狐浏览器访问网页，之后利用<code>urlopen</code>来打开这个请求，同时得到一个响应，最后用<code>read()</code>方法将里面的内容读出来。运行这段代码后是不是可以看网页代码输出呢？</p>
+                </div>
+                <div class="col-md-2" style="background-color:#4d4d4d"></div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <div class="container col-xs-6 col-sm-6 col-md-6 col-lg-6">
+        <div class="row">
+            <p class="text-right">&copy;tsleon</p>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.js"></script>
+
+</body>
+</html>
