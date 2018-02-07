@@ -272,7 +272,7 @@ def client_handler(client_socket):
 
                     <p>打开一个终端运行<code>python bhpnet.py -l -p 9999 -c</code>，这段命令为作为服务端监听所以主机在9999号端口的连接并且打开一个命令行shell。再打开另外一个终端运行<code>python bhpnet.py -t localhost -p 9999</code>,这段命令为作为客户端连接本地的9999号端口，在输入<code>CTRL-D</code>（为linux系统下，如是windows系统则为CTRL-Z）来结束从标准输入端的输入从而让客户端进入<code>client_sender()</code>函数，之后客户端便会显示&lt;BHP:#&gt;表示打开命令个shell，即可输入命令，命令将会送入服务端执行再将执行结果返回至客户端显示。</p>
 
-                    <p>建立一个TCP代理，在无法使用wireshark等软件时用来嗅探本地流量，或者了解位置协议。</p>
+                    <p>建立一个TCP代理，在无法使用wireshark等软件时用来嗅探本地流量，或者了解未知协议。</p>
                     <p>TCP代理的工作流程：假设有A，B两台主机。A与TCP代理之间交换数据，B与TCP代理交换数据的方式来替代A，B之间之间交换数据。</p>
 
 
