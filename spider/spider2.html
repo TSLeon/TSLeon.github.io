@@ -40,9 +40,10 @@
             <p><br></p>
 
             <div class="row">
-                <h4>urllib2库的使用</h4>
+                <h3>urllib2库的使用</h3>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
                 <div class="col-md-8">
+                    <p class="text-info lead">打开方式：urlopen</p>
                     <p>我们浏览的网页都是通过html，css，javascript等混合组成通过浏览器解释后才呈现出我们平时所见的页面，其中css，javascript等是对网页的渲染，给网页增添活力什么的，真正的主干内容是写在html中的，而我们一般想要抓取的内容也都在其中。</p>
                     <pre>import urllib2
 
@@ -71,13 +72,64 @@ def download(url):
 url = "http://www.qiushibaike.com"
 download(url)</pre>
                     <p>上述代码中增加了一个<code>headers</code>字典，一个<code>request</code>其他基本没改变，这种方式便是模仿浏览器访问服务器的方式——浏览器访问网页时会向服务器发送一个请求(request)，服务器接受后将产生一个响应(response),浏览器接受到这个响应后，我们就能看到所浏览的网页 了(当然实际过程还有很多操作，简化后大概就是这样)。所以我们先利用<code>Request</code>函数制作一个请求，其中放入两个参数<code>url</code>,<code>headers</code>，其中headers中user-agent就表示你是在用浏览器访问。这里表示我在用火狐浏览器访问网页，之后利用<code>urlopen</code>来打开这个请求，同时得到一个响应，最后用<code>read()</code>方法将里面的内容读出来。运行这段代码后是不是可以看网页代码输出呢？</p>
+                    <p class="text-info lead">访问方式(一):GET</p>
+                    <p>urllib2库利用GET方法访问网页时，对网页提共的参数直接拼接在url上，比如百度搜索，打开百度搜索任意词条，如python</p>
+                    <pre>https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=0&rsv_idx=1&tn=baidu&wd=python&rsv_pq=87fc81010000b4a1&rsv_t=5b44sZ44elEGtZ6L%2FirC1%2B3%2FtSsojOK0IOkD0mTm6eOrRG5CiBjut2YnBfM&rqlang=cn&rsv_enter=1&rsv_sug3=7&rsv_sug1=6&rsv_sug7=100&rsv_sug2=0&inputT=1255&rsv_sug4=2099&rsv_sug=2</pre>
+                    <p>可以发现搜索后的url胖成了这副模样，不过没关系，大多是水肿，‘？’之前的是主体url，之后的便是参数，我们只需要找到之前搜索的词条<code>python</code>。最后发现参数中的<code>wd</code>的值是python，那就是我们要找的参数，根据这个参数开始编写爬虫。</p>
+                    <pre>import urllib
+import urllib2
+
+headers = {
+    'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
+}
+param = {
+    'wd':'python'
+}
+param = urllib.urlencode(param)
+def download(url):
+    try:
+        request = urllib2.Request(url,headers=headers)
+        html = urllib2.urlopen(request)
+        print html.read()
+    except urllib2.URLError as e:
+        print 'Download error:',e.reason
+url = "https://www.baidu.com/s" + '?' +param
+print url
+download(url)</pre>
+                    <p>上述代码中我们添加了新的库文件urllib，同urllib2类似，但没有Request的构造方法。这里用到它的urlencode()函数来生成GET方式的参数格式。之后设置参数，添加了一个param字典,在里面添加参数键值对，利用urlencode构造参数格式，最后添加至主体url中（记得添加‘？’）。我们可以打印这个最终的url</p>
+                    <pre>https://www.baidu.com/s?wd=python</pre>
+                    <p>这样便是利用GET方式访问网页了，虽然可以很直观的看到自己提交的数据是什么，但是如果数据涉及密码的话，这种方式就是一种不安全的选择了。</p>
+                    <p class="text-info lead">访问方式(二):POST</p>
+                    <p>与GET方式不同，POST是以提交表单的形式提交数据，这种方式提交的数据不会显示在url中比GET方式较为安全，但无法直观的看到自己提交的数据。一般登录页面都是用POST方式提交数据。</p>
+                    <pre>import urllib
+import urllib2
+
+headers = {
+    'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
+}
+data = {
+    'username':'xxxx',
+    'passwd':'xxxx'
+}
+data = urllib.urlencode(data)
+def download(url):
+    try:
+        request = urllib2.Request(url,headers=headers,data=data)
+        html = urllib2.urlopen(request)
+        print html.read()
+    except urllib2.URLError as e:
+        print 'Download error:',e.reason
+url = "https://www.xxx.xx/login"#假设为某个登录页面
+download(url)
+                    </pre>
+                    <p>与GET方式区别不大，其中<code>data</code>为提交的表单数据(如登入时用户名与密码),同样用urllib加密，最后无需对url做改变，而是在构造Request时加入data参数，这样便可以将我们设置的数据以POST的方式提交到登录页面了</p>
+                    <p class="text-warning">上述代码是无法登录页面的，实际提交表单的过程中还需根据不同的页面设置不同的键值对，还需对验证码的处理等，这里只是叙述POST方式的提交方法。</p>
                 </div>
                 <div class="col-md-2" style="background-color:#4d4d4d"></div>
             </div>
 
         </div>
     </div>
-
 
 
     <div class="container col-xs-6 col-sm-6 col-md-6 col-lg-6">
