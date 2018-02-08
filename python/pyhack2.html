@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>python黑帽子学习笔记(二)</title>
+
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css">
+</head>
+<body style="background-color:#F8F8F8">
+    <!--左导航栏-->
+    <div class="navbar navbar-fixed-top col-xs-2 col-sm-2 col-md-2 col-lg-2 pull-left" role="navigation" style="height:100%;background-color:white;padding:0;margin:0;width:15%">
+        <div class="container-fluid" style="background-color:#4d4d4d;height:40%;">
+        </div>
+        <div class="container-fluid" style="height:60%">
+            <div class="row">
+                <h3 class="text-center">TS</h3>
+            </div>
+            <div class="row">
+                <p class="text-center">La vie en rose</p>
+            </div>
+            <div class="row">
+                <a href="https://tsleon.github.io/"><p class="text-center">主页</p></a>
+                <a href="https://tsleon.github.io/pyhack_home.html"><p class="text-center">Python</p></a>
+                <a href="https://tsleon.github.io/spider/spider.html"><p class="text-center">Python爬虫</p></a>
+                <p class="text-center">.</p>
+                <p class="text-center">.</p>
+            </div>
+        </div>
+    </div>
+
+    <!--右内容-->
+    <div class="container col-xs-10 col-sm-10 col-md-10 col-lg-10 pull-right" style="width:85%;">
+        <div class="container" style="background-color:white">
+            <div class="row">
+                <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1" style="background-color:#4d4d4d;width:5px;height:80px"></div>
+                <h2 class="col-xs-11 col-sm-11 col-md-11 col-lg-11 text-center">PYTHON黑帽子学习笔记(二)</h2>
+            </div>
+            <div class="row">
+                <img class="img-rounded col-xs-offset-1 col-sm-offset-1 col-md-offset-1 col-lg-offset-1" src="https://tsleon.github.io/img/006.jpeg" style="width:80%;height:80%">
+            </div>
+            <p><br></p>
+
+            <div class="row">
+                <h3>第二章：原始套接字和流量嗅探</h3>
+                <div class="col-md-2" style="background-color:#4d4d4d"></div>
+                <div class="col-md-8">
+                    <p class="text-info lead">Windows和Linux上的包嗅探</p>
+                    <p>在Windows和Linux上访问原始套接字有些许不同，为了提高嗅探工具的灵活性，我们将先创建套接字对象，然后判断在那个平台上运行，在Windows平台上，我们需要通过套接字输入/输出控制设置一些额外的标志，它允许在网络接口上启用混杂模式。下面这个例子将只读取一个数据包。</p>
+                    <pre>import socket
+import os
+
+if os.name == "nt":
+    socket_protocol = socket.IPPROTO_IP
+else:
+    socket_protocol = socket.IPPROTO_ICMP
+
+sniffer = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket_protocol)
+
+sniffer.bind((host,0))
+sniffer.setsockopt(socket.IPPROTO_IP,socket.IP_HDRINCL,1)
+
+if os.name == "nt":
+    sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_ON)
+
+print sniffer.recvfrom(65565)
+
+if os.name == 'nt':
+    sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_OFF)</pre>
+                    <p class="text-warning">以管理者的身份运行代码(如果权限不足可能无法创建SOCK_RAW套接字)，打开另一个终端ping baidu.com,便会接收到百度的ICMP响应包，如果在Windows下则收到的是请求包。</p>
+                    <p class="text-primary">接下来解码IP层信息</p>
+                    <pre>import socket
+import os
+import struct
+from ctypes import *
+
+host = '192.168.231.129'
+
+class IP(Structure):
+
+    _fields_ = [
+        ("ihl",             c_ubyte,4),
+        ("version",         c_ubyte,4),
+        ("tos",             c_ubyte),
+        ("len",             c_ushort),
+        ("id",              c_ushort),
+        ("offset",          c_ushort),
+        ("ttl",             c_ubyte),
+        ("protocol_num",    c_ubyte),
+        ("sum",             c_ushort),
+        ("src",             c_ulong),
+        ("dst",             c_ulong)#如果为64位机src，dst需为c_uint32
+    ]
+
+    def __new__(self, socket_buffer=None):
+        return self.from_buffer_copy(socket_buffer)
+
+    def __init__(self,socket_buffer=None):
+        #协议字段对应协议名称
+        self.protocol_map = {1:"ICMP",6:"TCP",17:"UDP"}
+
+        #将IP地址转化成4段地址形式
+        self.src_address = socket.inet_ntoa(struct.pack("&lt;L",self.src))
+        self.dst_address = socket.inet_ntoa(struct.pack("&lt;L",self.dst))
+
+        try:
+            self.protocol = self.protocol_map[self.protocol_num]
+        except:
+            self.protocol = str(self.protocol_num)
+
+if os.name == "nt":
+    socket_protocol = socket.IPPROTO_IP
+else:
+    socket_protocol = socket.IPPROTO_ICMP
+
+sniffer = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket_protocol)
+
+sniffer.bind((host,0))
+#设置在捕获的数据包中包含IP头
+sniffer.setsockopt(socket.IPPROTO_IP,socket.IP_HDRINCL,1)
+
+if os.name == "nt":
+    sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_ON)
+
+try:
+
+    while True:
+        raw_buffer = sniffer.recvfrom(65565)[0]
+        #将缓冲区的前20字节按IP头解析
+        ip_header = IP(raw_buffer[0:20])
+
+        print "protocol: %s %s -> %s" % (ip_header.protocol,ip_header.src_address,ip_header.dst_address)
+except KeyboardInterrupt:
+    if os.name == 'nt':
+        sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_OFF)</pre>
+                    <p class="text-warning">同样以管理员身份运行，注意构造ip头格式时，根据机型的不同对<code>src</code>,<code>dst</code>这两个键值对需做相同的调整。</p>
+                    <img class="img-thumbnail" src="https://tsleon.github.io/img/dip.png">
+                    <p><br></p>
+                    <p class="text-primary">解码ICMP层</p>
+                    <pre>import socket
+import os
+import struct
+from ctypes import *
+
+host = '192.168.231.129'
+
+class IP(Structure):
+
+    _fields_ = [
+        ("ihl",             c_ubyte,4),
+        ("version",         c_ubyte,4),
+        ("tos",             c_ubyte),
+        ("len",             c_ushort),
+        ("id",              c_ushort),
+        ("offset",          c_ushort),
+        ("ttl",             c_ubyte),
+        ("protocol_num",    c_ubyte),
+        ("sum",             c_ushort),
+        ("src",             c_uint32),
+        ("dst",             c_uint32)
+    ]
+
+    def __new__(self, socket_buffer=None):
+        return self.from_buffer_copy(socket_buffer)
+
+    def __init__(self,socket_buffer=None):
+        #协议字段对应协议名称
+        self.protocol_map = {1:"ICMP",6:"TCP",17:"UDP"}
+
+        #将IP地址转化成4段地址形式
+        self.src_address = socket.inet_ntoa(struct.pack("&lt;L",self.src))
+        self.dst_address = socket.inet_ntoa(struct.pack("&lt;L",self.dst))
+
+        try:
+            self.protocol = self.protocol_map[self.protocol_num]
+        except:
+            self.protocol = str(self.protocol_num)
+
+class ICMP(Structure):
+
+    _fields_ = [
+        ("type",        c_ubyte),
+        ("code",        c_ubyte),
+        ("checksum",    c_ushort),
+        ("unused",      c_ushort),
+        ("next_hop_mtu",c_ushort)
+    ]
+
+    def __new__(cls,socket_buffer):
+        return cls.from_buffer_copy(socket_buffer)
+
+    def __init__(self,socket_buffer):
+        pass
+
+
+if os.name == "nt":
+    socket_protocol = socket.IPPROTO_IP
+else:
+    socket_protocol = socket.IPPROTO_ICMP
+
+sniffer = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket_protocol)
+
+sniffer.bind((host,0))
+#设置在捕获的数据包中包含IP头
+sniffer.setsockopt(socket.IPPROTO_IP,socket.IP_HDRINCL,1)
+
+if os.name == "nt":
+    sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_ON)
+
+try:
+
+    while True:
+        raw_buffer = sniffer.recvfrom(65565)[0]
+        #将缓冲区的前20字节按IP头解析
+        ip_header = IP(raw_buffer[0:20])
+
+        print "protocol: %s %s -> %s" % (ip_header.protocol,ip_header.src_address,ip_header.dst_address)
+        if ip_header.protocol == "ICMP":
+            #计算ICMP头部起始位置
+            offset = ip_header.ihl * 4
+            buf = raw_buffer[offset:offset + sizeof(ICMP)]
+            icmp_header = ICMP(buf)
+            print "ICMP -> Type: %d Code: %d" % (icmp_header.type,icmp_header.code)
+
+except KeyboardInterrupt:
+    if os.name == 'nt':
+        sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_OFF)</pre>
+                    <img class="img-thumbnail" src="https://tsleon.github.io/img/icmp.png">
+                    <p class="text-info">ICMP头部是包含在IP数据包内的IP头之后便是ICMP头部信息(如果IP头标志的协议是ICMP协议的话) 所以用IP头长度乘以4个字节便得到ICMP头部的起始位置(IP头长表示有多少个32位的分片个数，也就是多少个4个字节)</p>
+                    <p class="text-primary">利用netaddr完成嗅探器</p>
+                    <pre># -*- coding:utf-8 -*-
+import socket
+import os
+import struct
+from ctypes import *
+import threading
+import time
+from netaddr import IPNetwork,IPAddress
+
+host = '192.168.231.129'
+
+subnet = '192.168.231.0/24'
+
+magic_message = "PYTHONRULES!"
+
+def udp_sender(subnet,magic_message):
+    time.sleep(5)
+    sender = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+    for ip in IPNetwork(subnet):
+        try:
+            sender.sendto(magic_message,("%s" % ip,65212))
+        except:
+            pass
+
+    print "DONE!"
+
+class IP(Structure):
+
+    _fields_ = [
+        ("ihl",             c_ubyte,4),
+        ("version",         c_ubyte,4),
+        ("tos",             c_ubyte),
+        ("len",             c_ushort),
+        ("id",              c_ushort),
+        ("offset",          c_ushort),
+        ("ttl",             c_ubyte),
+        ("protocol_num",    c_ubyte),
+        ("sum",             c_ushort),
+        ("src",             c_uint32),
+        ("dst",             c_uint32)
+    ]
+
+    def __new__(self, socket_buffer=None):
+        return self.from_buffer_copy(socket_buffer)
+
+    def __init__(self,socket_buffer=None):
+        #协议字段对应协议名称
+        self.protocol_map = {1:"ICMP",6:"TCP",17:"UDP"}
+
+        #将IP地址转化成4段地址形式
+        self.src_address = socket.inet_ntoa(struct.pack("&lt;L",self.src))
+        self.dst_address = socket.inet_ntoa(struct.pack("&lt;L",self.dst))
+
+        try:
+            self.protocol = self.protocol_map[self.protocol_num]
+        except:
+            self.protocol = str(self.protocol_num)
+
+class ICMP(Structure):
+
+    _fields_ = [
+        ("type",        c_ubyte),
+        ("code",        c_ubyte),
+        ("checksum",    c_ushort),
+        ("unused",      c_ushort),
+        ("next_hop_mtu",c_ushort)
+    ]
+
+    def __new__(cls,socket_buffer):
+        return cls.from_buffer_copy(socket_buffer)
+
+    def __init__(self,socket_buffer):
+        pass
+
+t = threading.Thread(target=udp_sender,args=(subnet,magic_message))
+t.start()
+
+if os.name == "nt":
+    socket_protocol = socket.IPPROTO_IP
+else:
+    socket_protocol = socket.IPPROTO_ICMP
+
+sniffer = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket_protocol)
+
+sniffer.bind((host,0))
+#设置在捕获的数据包中包含IP头
+sniffer.setsockopt(socket.IPPROTO_IP,socket.IP_HDRINCL,1)
+
+if os.name == "nt":
+    sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_ON)
+
+try:
+
+    while True:
+        raw_buffer = sniffer.recvfrom(65565)[0]
+        #将缓冲区的前20字节按IP头解析
+        ip_header = IP(raw_buffer[0:20])
+
+        print "protocol: %s %s -> %s" % (ip_header.protocol,ip_header.src_address,ip_header.dst_address)
+        if ip_header.protocol == "ICMP":
+            #计算ICMP头部起始位置
+            offset = ip_header.ihl * 4
+            buf = raw_buffer[offset:offset + sizeof(ICMP)]
+            icmp_header = ICMP(buf)
+            print "ICMP -> Type: %d Code: %d" % (icmp_header.type,icmp_header.code)
+            if icmp_header.Code == 3 and icmp_header.Type == 3:
+                if IPAddress(ip_header.src_address) in IPNetwork(subnet):
+                    if raw_buffer[len(raw_buffer) - len(magic_message):] == magic_message:
+                        print "Host Up: %s" % ip_header.src_address
+
+except KeyboardInterrupt:
+    if os.name == 'nt':
+        sniffer.ioctl(socket.SIO_RCVALL,socket.RCVALL_OFF)</pre>
+                    <p class="text-info">上述代码中netaddr模块中的IPNetwork可以列出某个网段中的所有ip地址，配合IPAddres来判断某个ip地址是否存在于给定的网段。代码开始时定义一个标志变量<code>magic_message</code>用它来判断接收到的包是否为自己发送的，当我们用新的线程发送UDP数据包到目标主机的一个未开放的端口时会返回一个ICMP包，其中的type，code的值都为3,分别表示目标不可达和端口不可达。这时再检查数据包最后一段数据是否为<code>magic_message</code>的值,如果是则发现目标主机。</p>
+                    <p class="text-warning">如果扫描不到网段内有主机，但又确定知道网段内存在主机，则可以关闭防火墙或者杀毒软件再次扫描。</p>
+                </div>
+                <div class="col-md-2" style="background-color:#4d4d4d"></div>
+            </div>
+        </div>
+    </div>
+
+    <!--底部-->
+    <div class="container col-xs-6 col-sm-6 col-md-6 col-lg-6">
+        <div class="row">
+            <p class="text-right">&copy;tsleon</p>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.js"></script>
+</body>
+</html>
